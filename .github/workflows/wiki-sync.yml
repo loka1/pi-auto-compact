@@ -1,0 +1,41 @@
+name: Sync wiki
+
+# Syncs the version-controlled `wiki/` folder to the GitHub wiki.
+# Requires a PAT with "repo" (or fine-grained "Contents: read/write") scope
+# stored as the `WIKI_TOKEN` repository secret. GITHUB_TOKEN cannot push to the wiki.
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "wiki/**"
+
+jobs:
+  sync-wiki:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Sync wiki pages
+        env:
+          GH_TOKEN: ${{ secrets.WIKI_TOKEN }}
+        run: |
+          set -e
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          rm -rf /tmp/wiki
+          git clone "https://x-access-token:${GH_TOKEN}@github.com/loka1/pi-auto-compact.wiki.git" /tmp/wiki
+
+          # Replace all existing .md pages with the version-controlled ones
+          find /tmp/wiki -maxdepth 1 -name '*.md' -delete
+          cp "$GITHUB_WORKSPACE"/wiki/*.md /tmp/wiki/
+
+          cd /tmp/wiki
+          if git diff --quiet && git status --porcelain | grep -q .; then
+            git add -A
+            git commit -m "Sync wiki from repo (wiki/)"
+            git push origin HEAD:master
+          else
+            echo "No wiki changes to sync."
+          fi

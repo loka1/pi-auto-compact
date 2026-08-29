@@ -1,6 +1,6 @@
 {
   "name": "@loka_s/pi-auto-compact",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Automatically compacts pi's context when it drops to a configurable percentage remaining, settable globally or per model, with a live status-bar indicator.",
   "keywords": [
     "pi-package",
@@ -18,13 +18,16 @@
   "files": [
     "extensions",
     "config",
+    "assets",
     "README.md",
+    "CHANGELOG.md",
     "LICENSE"
   ],
   "pi": {
     "extensions": [
       "./extensions"
-    ]
+    ],
+    "image": "https://raw.githubusercontent.com/loka1/pi-auto-compact/main/assets/preview.png"
   },
   "peerDependencies": {
     "@earendil-works/pi-coding-agent": "*"
