@@ -32,10 +32,10 @@ jobs:
           cp "$GITHUB_WORKSPACE"/wiki/*.md /tmp/wiki/
 
           cd /tmp/wiki
-          if git diff --quiet && git status --porcelain | grep -q .; then
-            git add -A
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No wiki changes to sync."
+          else
             git commit -m "Sync wiki from repo (wiki/)"
             git push origin HEAD:master
-          else
-            echo "No wiki changes to sync."
           fi
