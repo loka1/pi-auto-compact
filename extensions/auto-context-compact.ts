@@ -1,9 +1,9 @@
 /**
  * Auto Context Compaction
  *
- * Automatically triggers compaction when the conversation context drops to a
- * configured percentage remaining (default 20%, i.e. 80% of the context window
- * is used). The threshold can be set:
+ * Automatically triggers compaction when the conversation context reaches a
+ * configured percentage of the context window USED (default 80%). The threshold
+ * can be set:
  *
  *   - Globally  (applies to every model that has no override)
  *   - Per model (specific <provider>/<id> or bare <id> overrides global)
@@ -16,12 +16,12 @@
  *     2. <project>/.pi/auto-compact.json      (project-local, wins)
  *
  *   Per-model thresholds are stored in the same file under the "models" key
- *   (this is the "by model" setting), while "percentRemaining" is the global
+ *   (this is the "by model" setting), while "compactAtPercent" is the global
  *   default used by every model that has no per-model override.
  *
  *   {
  *     "enabled": true,
- *     "percentRemaining": 20,          // compact when this % of context remains
+ *     "compactAtPercent": 80,          // compact when this % of context is used
  *     "cooldownTurns": 1,              // min turns between auto-compactions
  *     "models": {
  *       "anthropic/claude-sonnet-4-5": 15,   // key by provider/id or bare id
@@ -38,8 +38,8 @@
  *     /set-auto-compact-limit <pct>              quick global set
  *     /set-auto-compact-limit <pct> model <id>   quick per-model set
  *
- *   A footer status bar shows the active limit: auto-compact @<limit>%
- *   (e.g. auto-compact @15%), updated every turn and on model change.
+ *   A footer status bar shows the active limit: auto-compact @<limit>% used
+ *   (e.g. auto-compact @20% used), updated every turn and on model change.
  *
  * Install: place in ~/.pi/agent/extensions/ (global) or .pi/extensions/
  * (project-local), then /reload.
@@ -52,17 +52,17 @@ import { homedir } from "node:os";
 
 interface AutoCompactConfig {
 	enabled: boolean;
-	/** Compact when this percentage of the context window remains. */
-	percentRemaining: number;
+	/** Compact when this percentage of the context window is used. */
+	compactAtPercent: number;
 	/** Minimum number of turns between automatic compactions. */
 	cooldownTurns: number;
-	/** Per-model overrides keyed by "provider/id" or bare "id" -> percentRemaining. */
+	/** Per-model overrides keyed by "provider/id" or bare "id" -> compactAtPercent. */
 	models: Record<string, number>;
 }
 
 const DEFAULTS: AutoCompactConfig = {
 	enabled: true,
-	percentRemaining: 20,
+	compactAtPercent: 80,
 	cooldownTurns: 1,
 	models: {},
 };
@@ -72,12 +72,15 @@ const projectConfigPath = (ctx: ExtensionContext) => join(ctx.cwd, ".pi", "auto-
 
 function normalize(value: unknown): AutoCompactConfig {
 	const src = (value ?? {}) as Partial<AutoCompactConfig>;
+	const legacyRemaining = (src as Record<string, unknown>).percentRemaining;
 	return {
 		enabled: typeof src.enabled === "boolean" ? src.enabled : DEFAULTS.enabled,
-		percentRemaining:
-			typeof src.percentRemaining === "number"
-				? clampPercent(src.percentRemaining)
-				: DEFAULTS.percentRemaining,
+		compactAtPercent:
+			typeof src.compactAtPercent === "number"
+				? clampPercent(src.compactAtPercent)
+				: typeof legacyRemaining === "number"
+					? clampPercent(100 - legacyRemaining) // migrate legacy "remaining" config
+					: DEFAULTS.compactAtPercent,
 		cooldownTurns:
 			typeof src.cooldownTurns === "number" && src.cooldownTurns >= 0
 				? src.cooldownTurns
@@ -125,10 +128,10 @@ function saveConfig(_ctx: ExtensionContext, config: AutoCompactConfig): { ok: bo
 	}
 }
 
-/** Effective remaining-percent threshold for a given model (per-model wins over global). */
+/** Effective compact-at-used-percent threshold (per-model wins over global). */
 function thresholdForModel(config: AutoCompactConfig, provider: string, id: string): number {
 	const model = config.models[id] ?? config.models[`${provider}/${id}`];
-	return typeof model === "number" ? clampPercent(model) : config.percentRemaining;
+	return typeof model === "number" ? clampPercent(model) : config.compactAtPercent;
 }
 
 function modelKey(provider: string | undefined, id: string): string {
@@ -145,7 +148,7 @@ export default function (pi: ExtensionAPI) {
 		let text = "auto-compact: n/a";
 		if (model && window) {
 			const threshold = thresholdForModel(configOf(ctx), model.provider, model.id);
-			text = `auto-compact @${threshold}%`;
+			text = `auto-compact @${threshold}% used`;
 		}
 		ctx.ui.setStatus("auto-compact", text);
 	};
@@ -163,22 +166,22 @@ export default function (pi: ExtensionAPI) {
 		if (!model || !model.contextWindow) return;
 
 		const window = model.contextWindow;
-		const remainingPercent = ((window - usage.tokens) / window) * 100;
+		const usedPercent = (usage.tokens / window) * 100;
 		const threshold = thresholdForModel(config, model.provider, model.id);
 
-		// Only cross from above -> at/below, and respect cooldown.
-		if (remainingPercent > threshold) return;
+		// Compact once usage reaches the threshold, respecting the cooldown.
+		if (usedPercent < threshold) return;
 		if (turnIndex - lastCompactTurn < config.cooldownTurns) return;
 		lastCompactTurn = turnIndex;
 
 		if (ctx.hasUI) {
 			ctx.ui.notify(
-				`Auto-compact: ${remainingPercent.toFixed(1)}% context remaining (threshold ${threshold}%) for ${modelKey(model.provider, model.id)} — compacting…`,
+				`Auto-compact: ${usedPercent.toFixed(1)}% context used (threshold ${threshold}%) for ${modelKey(model.provider, model.id)} — compacting…`,
 				"info",
 			);
 		}
 		ctx.compact({
-			customInstructions: `Context was at ${remainingPercent.toFixed(1)}% remaining (threshold ${threshold}%). Summarize the conversation to free up context while preserving all critical context, decisions, and next steps.`,
+			customInstructions: `Context reached ${usedPercent.toFixed(1)}% used (threshold ${threshold}%). Summarize the conversation to free up context while preserving all critical context, decisions, and next steps.`,
 			onComplete: () => {
 				if (ctx.hasUI) ctx.ui.notify("Auto-compaction completed.", "info");
 				updateStatus(ctx);
@@ -211,7 +214,7 @@ export default function (pi: ExtensionAPI) {
 				const model = ctx.model;
 				const lines: string[] = [];
 				lines.push(`enabled: ${config.enabled ? "yes" : "no"}`);
-				lines.push(`global compact-at-remaining: ${config.percentRemaining}%`);
+				lines.push(`global compact-at-used: ${config.compactAtPercent}%`);
 				lines.push(`cooldown: ${config.cooldownTurns} turn(s)`);
 				if (model) {
 					const eff = thresholdForModel(config, model.provider, model.id);
@@ -225,7 +228,7 @@ export default function (pi: ExtensionAPI) {
 						`current model: ${modelKey(model.provider, model.id)} (window ${model.contextWindow.toLocaleString()} tokens)`,
 					);
 					lines.push(
-						`effective threshold: ${eff}% remaining${overrideKey ? ` (per-model "${overrideKey}")` : " (global)"}`,
+						`effective threshold: compact when ${eff}% used${overrideKey ? ` (per-model "${overrideKey}")` : " (global)"}`,
 					);
 					if (usage && typeof usage.tokens === "number") {
 						lines.push(
@@ -259,14 +262,14 @@ export default function (pi: ExtensionAPI) {
 			if (sub === "set") {
 				const pct = Number(parts[1]);
 				if (!Number.isFinite(pct)) {
-					ctx.ui.notify("Usage: /autocompact set <percentRemaining>", "error");
+					ctx.ui.notify("Usage: /autocompact set <percentUsed>", "error");
 					return;
 				}
-				const next = { ...config, percentRemaining: clampPercent(pct) };
+				const next = { ...config, compactAtPercent: clampPercent(pct) };
 				const res = saveConfig(ctx, next);
 				ctx.ui.notify(
 					res.ok
-						? `Global compact-at-remaining set to ${clampPercent(pct)}% (${res.path})`
+						? `Global compact-at-used set to ${clampPercent(pct)}% (${res.path})`
 						: `Failed to save: ${res.error}`,
 					res.ok ? "info" : "error",
 				);
@@ -277,13 +280,13 @@ export default function (pi: ExtensionAPI) {
 				const id = parts[1];
 				const pct = Number(parts[2]);
 				if (!id || !Number.isFinite(pct)) {
-					ctx.ui.notify("Usage: /autocompact model <provider/id|id> <percentRemaining>", "error");
+					ctx.ui.notify("Usage: /autocompact model <provider/id|id> <percentUsed>", "error");
 					return;
 				}
 				const models = { ...config.models, [id]: clampPercent(pct) };
 				const res = saveConfig(ctx, { ...config, models });
 				ctx.ui.notify(
-					res.ok ? `Per-model ${id} compact-at-remaining set to ${clampPercent(pct)}% (${res.path})` : `Failed to save: ${res.error}`,
+					res.ok ? `Per-model ${id} compact-at-used set to ${clampPercent(pct)}% (${res.path})` : `Failed to save: ${res.error}`,
 					res.ok ? "info" : "error",
 				);
 				return;
@@ -314,13 +317,13 @@ export default function (pi: ExtensionAPI) {
 
 	// Dedicated, easy-to-type command to change the limit quickly.
 	pi.registerCommand("set-auto-compact-limit", {
-		description: "Set auto-compact limit (context % remaining) globally or per model",
+		description: "Set auto-compact limit (context % used) globally or per model",
 		handler: async (args, ctx) => {
 			const parts = (args ?? "").trim().split(/\s+/).filter(Boolean);
 			const pct = Number(parts[0]);
 			if (!Number.isFinite(pct)) {
 				ctx.ui.notify(
-					"Usage: /set-auto-compact-limit <percentRemaining> [model <provider/id|id>]",
+					"Usage: /set-auto-compact-limit <percentUsed> [model <provider/id|id>]",
 					"error",
 				);
 				return;
@@ -334,7 +337,7 @@ export default function (pi: ExtensionAPI) {
 				next.models = { ...next.models, [id]: clampPercent(pct) };
 				where = `for model "${id}"`;
 			} else {
-				next.percentRemaining = clampPercent(pct);
+				next.compactAtPercent = clampPercent(pct);
 			}
 
 			const res = saveConfig(ctx, next);
@@ -344,7 +347,7 @@ export default function (pi: ExtensionAPI) {
 			}
 
 			ctx.ui.notify(
-				`Auto-compact limit set to ${clampPercent(pct)}% remaining ${where} (compact when ${100 - clampPercent(pct)}% used); saved to ${res.path}`,
+				`Auto-compact limit set: compact at ${clampPercent(pct)}% used ${where}; saved to ${res.path}`,
 				"info",
 			);
 			updateStatus(ctx);

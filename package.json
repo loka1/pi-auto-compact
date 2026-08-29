@@ -1,6 +1,6 @@
 {
   "name": "@loka1/pi-auto-compact",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Automatically compacts pi's context when it drops to a configurable percentage remaining, settable globally or per model, with a live status-bar indicator.",
   "keywords": [
     "pi-package",

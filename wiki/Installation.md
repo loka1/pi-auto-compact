@@ -8,7 +8,7 @@ pi install npm:@loka1/pi-auto-compact
 
 # From GitHub (optionally pinned to a version)
 pi install git:github.com/loka1/pi-auto-compact
-pi install git:github.com/loka1/pi-auto-compact@v0.1.1
+pi install git:github.com/loka1/pi-auto-compact@v0.3.0
 ```
 
 ## Manual
@@ -25,7 +25,7 @@ Then run `/reload` in pi (or restart) to load it.
 After loading, the footer status bar shows the active limit, e.g.:
 
 ```
-auto-compact @20%
+auto-compact @20% used
 ```
 
 Run `/autocompact` to see the full configuration and the effective limit for the current model.

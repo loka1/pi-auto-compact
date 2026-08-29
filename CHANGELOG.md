@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-08-29
+
+### Changed (breaking)
+- **Limit semantics changed from "% remaining" to "% USED".**
+  The setting is now `compactAtPercent`: **compact when this % of the context
+  window is used** (20 = compact at 20% used). Lower = compact sooner; higher =
+  wait longer. The status bar now reads e.g. `auto-compact @20% used`.
+  - Config key renamed `percentRemaining` → `compactAtPercent`.
+    Legacy `percentRemaining` config is migrated automatically (`100 - value`).
+  - CLI help/notifications updated to "compact at X% used".
+
 ## [0.2.0] - 2026-08-29
 
 ### Changed

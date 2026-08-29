@@ -10,7 +10,7 @@ Config is merged from JSON files. **Project** config wins over **global**.
 ```json
 {
   "enabled": true,
-  "percentRemaining": 20,
+  "compactAtPercent": 20,
   "cooldownTurns": 1,
   "models": {
     "deepseek/deepseek-v4-pro": 15,
@@ -24,7 +24,7 @@ Config is merged from JSON files. **Project** config wins over **global**.
 | Field | Description |
 |-------|-------------|
 | `enabled` | Master on/off switch. |
-| `percentRemaining` | **Global** default — compact when this % of the context window remains (20 = compact when 80% full). |
+| `compactAtPercent` | **Global** default — **compact when this % of the context window is used** (20 = compact when 20% used; higher waits longer, lower compacts sooner). |
 | `cooldownTurns` | Minimum turns between automatic compactions. |
 | `models` | **Per-model** overrides, keyed by `"provider/id"` or bare `"id"`. Always win over the global value. |
 

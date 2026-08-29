@@ -1,9 +1,9 @@
 # pi-auto-compact
 
-**pi-auto-compact** is a [pi](https://github.com/earendil-works/pi-mono) extension that **automatically compacts the conversation context** when it drops to a configurable percentage remaining (default **20%**, i.e. 80% of the context window is used).
+**pi-auto-compact** is a [pi](https://github.com/earendil-works/pi-mono) extension that **automatically compacts the conversation context** when it reaches a configurable percentage of the context window **used** (default **80%**).
 
 - **Global or per-model limits** — one default for all models, with overrides per `provider/id` or bare `id`.
-- **Live status bar** — shows the active limit, e.g. `auto-compact @15%`, updated every turn and on model change.
+- **Live status bar** — shows the active limit, e.g. `auto-compact @20% used`, updated every turn and on model change.
 - **Easy commands** to view and change the limit on the fly.
 
 ## Quick links
