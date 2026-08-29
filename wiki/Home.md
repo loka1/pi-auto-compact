@@ -17,3 +17,5 @@
 - [[Installation]]
 - [[Configuration]]
 - [[Commands]]
+
+> This wiki is auto-synced from the repo `wiki/` folder via GitHub Actions (requires the `WIKI_TOKEN` secret).
