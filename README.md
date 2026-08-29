@@ -1,5 +1,7 @@
 # pi-auto-compact
 
+![preview](assets/preview.png)
+
 A [pi](https://github.com/earendil-works/pi-mono) extension that **automatically compacts the conversation context** when it drops to a configurable percentage remaining (default **20%**, i.e. 80% of the context window is used).
 
 The limit can be set **globally** (all models) or **per model**, and a footer status bar shows the live context usage and the active limit.
