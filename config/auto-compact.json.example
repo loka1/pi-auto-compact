@@ -1,0 +1,13 @@
+{
+  "enabled": true,
+  "percentRemaining": 5,
+  "cooldownTurns": 1,
+  "models": {
+    "anthropic/claude-sonnet-4-5": 15,
+    "gpt-4o": 25,
+    "deepseek/deepseek-v4-pro": 15,
+    "deepseek/deepseek-v4-flash": 15,
+    "deepseek/deepseek-v4-flash-vision-exp": 15,
+    "inferx/deepseek-v4-flash-0731": 15
+  }
+}

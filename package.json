@@ -1,0 +1,30 @@
+{
+  "name": "pi-auto-compact",
+  "version": "0.1.0",
+  "description": "Automatically compacts pi's context when it drops to a configurable percentage remaining, settable globally or per model, with a live status-bar indicator.",
+  "keywords": [
+    "pi-package",
+    "pi",
+    "pi-extension",
+    "compaction",
+    "context",
+    "auto-compact"
+  ],
+  "license": "MIT",
+  "author": "loka1",
+  "files": [
+    "extensions",
+    "config",
+    "README.md",
+    "LICENSE"
+  ],
+  "pi": {
+    "extensions": [
+      "./extensions"
+    ]
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*",
+    "@earendil-works/pi-ai": "*"
+  }
+}
