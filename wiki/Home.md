@@ -18,4 +18,6 @@
 - [[Configuration]]
 - [[Commands]]
 
-> This wiki is auto-synced from the repo `wiki/` folder via GitHub Actions (requires the `WIKI_TOKEN` secret).
+> This wiki is auto-synced from the repo `wiki/` folder via GitHub Actions.
+> Syncs on every push to `main` that touches `wiki/`.
+> Requires a PAT stored as the `WIKI_TOKEN` repository secret.
