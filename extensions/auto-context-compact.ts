@@ -38,8 +38,8 @@
  *     /set-auto-compact-limit <pct>              quick global set
  *     /set-auto-compact-limit <pct> model <id>   quick per-model set
  *
- *   A footer status bar shows: auto-compact @<limit>% · ctx <used>% used
- *   (<remaining>% left), updated every turn and on model change.
+ *   A footer status bar shows the active limit: auto-compact @<limit>%
+ *   (e.g. auto-compact @15%), updated every turn and on model change.
  *
  * Install: place in ~/.pi/agent/extensions/ (global) or .pi/extensions/
  * (project-local), then /reload.
@@ -141,18 +141,11 @@ export default function (pi: ExtensionAPI) {
 	const updateStatus = (ctx: ExtensionContext) => {
 		if (!ctx.hasUI) return;
 		const model = ctx.model;
-		const usage = ctx.getContextUsage();
 		const window = model?.contextWindow;
 		let text = "auto-compact: n/a";
 		if (model && window) {
 			const threshold = thresholdForModel(configOf(ctx), model.provider, model.id);
-			if (usage && typeof usage.tokens === "number") {
-				const usedPct = ((usage.tokens / window) * 100).toFixed(1);
-				const remaining = (100 - parseFloat(usedPct)).toFixed(1);
-				text = `auto-compact @${threshold}% · ctx ${usedPct}% used (${remaining}% left)`;
-			} else {
-				text = `auto-compact @${threshold}% · ctx —`;
-			}
+			text = `auto-compact @${threshold}%`;
 		}
 		ctx.ui.setStatus("auto-compact", text);
 	};
