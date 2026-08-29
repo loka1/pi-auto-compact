@@ -18,7 +18,7 @@ As a package (from git or npm):
 ```bash
 pi install git:github.com/loka1/pi-auto-compact
 # or
-pi install npm:pi-auto-compact
+pi install npm:@loka_s/pi-auto-compact
 ```
 
 Or drop the file at `~/.pi/agent/extensions/` (global) / `.pi/extensions/` (project-local) and `/reload`.
