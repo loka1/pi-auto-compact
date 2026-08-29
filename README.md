@@ -51,15 +51,24 @@ Config is merged from JSON files (project wins over global), or set interactivel
 ## Commands
 
 ```
-/autocompact                          → show config + current status
-/autocompact set <percent>            → set global threshold
-/autocompact model <id> <percent>     → set per-model threshold
-/autocompact unset <id>               → remove a per-model override
-/autocompact toggle                   → enable/disable
+/autocompact                            → show config + effective limit for current model
+/autocompact set <percent>              → set the GLOBAL limit
+/autocompact model <id> <percent>       → set a PER-MODEL limit (overrides global)
+/autocompact unset <id>                 → remove a per-model override
+/autocompact toggle                     → enable/disable auto-compaction
 
-/set-auto-compact-limit 25                    → quick global set
-/set-auto-compact-limit 15 model gpt-4o       → quick per-model set
+# Quick one-command aliases:
+/set-auto-compact-limit 25                     → set the GLOBAL limit (compact when 25% left)
+/set-auto-compact-limit 15 model gpt-4o        → set a PER-MODEL limit for "gpt-4o"
 ```
+
+Per-model limits **always win** over the global one. Use the `provider/id` or bare
+`id` of the model, e.g. `inferx/deepseek-v4-flash-0731`, `deepseek/deepseek-v4-pro`,
+or just `gpt-4o`. To make a model follow the global limit instead, remove its
+override with `/autocompact unset <id>`.
+
+All changes are saved to the config file and take effect immediately (no reload
+needed); the footer status bar shows the active limit, e.g. ``auto-compact @15%``.
 
 ## License
 
