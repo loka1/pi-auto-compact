@@ -1,6 +1,6 @@
 {
-  "name": "@loka_s/pi-auto-compact",
-  "version": "0.1.2",
+  "name": "@loka1/pi-auto-compact",
+  "version": "0.2.0",
   "description": "Automatically compacts pi's context when it drops to a configurable percentage remaining, settable globally or per model, with a live status-bar indicator.",
   "keywords": [
     "pi-package",
@@ -12,6 +12,14 @@
   ],
   "license": "MIT",
   "author": "loka1",
+  "homepage": "https://github.com/loka1/pi-auto-compact#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/loka1/pi-auto-compact.git"
+  },
+  "bugs": {
+    "url": "https://github.com/loka1/pi-auto-compact/issues"
+  },
   "publishConfig": {
     "access": "public"
   },

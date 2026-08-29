@@ -9,8 +9,8 @@
 ## Quick links
 
 - Repository: https://github.com/loka1/pi-auto-compact
-- npm: `@loka_s/pi-auto-compact`
-- Install: `pi install npm:@loka_s/pi-auto-compact`
+- npm: `@loka1/pi-auto-compact`
+- Install: `pi install npm:@loka1/pi-auto-compact`
 
 ## Pages
 

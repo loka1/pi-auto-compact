@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-08-29
+
+### Changed
+- **Renamed npm scope from `@loka_s` to `@loka1`** to match the GitHub account.
+  The package is now published as **`@loka1/pi-auto-compact`**.
+- Added `homepage`, `repository`, and `bugs` links pointing to the GitHub repo.
+
 ## [0.1.2] - 2026-08-29
 
 ### Added

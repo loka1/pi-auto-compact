@@ -4,7 +4,7 @@
 
 ```bash
 # From npm
-pi install npm:@loka_s/pi-auto-compact
+pi install npm:@loka1/pi-auto-compact
 
 # From GitHub (optionally pinned to a version)
 pi install git:github.com/loka1/pi-auto-compact
