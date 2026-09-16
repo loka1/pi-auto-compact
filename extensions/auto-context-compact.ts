@@ -140,6 +140,11 @@ function modelKey(provider: string | undefined, id: string): string {
 
 export default function (pi: ExtensionAPI) {
 	let lastCompactTurn = -Infinity;
+	// True while a compaction triggered by this extension is still running.
+	// Prevents starting a second, concurrent manual compaction, which races pi's
+	// single `_compactionAbortController` and crashes with
+	// "Cannot read properties of undefined (reading 'signal')".
+	let isCompacting = false;
 
 	const updateStatus = (ctx: ExtensionContext) => {
 		if (!ctx.hasUI) return;
@@ -169,10 +174,14 @@ export default function (pi: ExtensionAPI) {
 		const usedPercent = (usage.tokens / window) * 100;
 		const threshold = thresholdForModel(config, model.provider, model.id);
 
+		// Never start another compaction while one is already in flight.
+		if (isCompacting) return;
+
 		// Compact once usage reaches the threshold, respecting the cooldown.
 		if (usedPercent < threshold) return;
 		if (turnIndex - lastCompactTurn < config.cooldownTurns) return;
 		lastCompactTurn = turnIndex;
+		isCompacting = true;
 
 		if (ctx.hasUI) {
 			ctx.ui.notify(
@@ -183,14 +192,26 @@ export default function (pi: ExtensionAPI) {
 		ctx.compact({
 			customInstructions: `Context reached ${usedPercent.toFixed(1)}% used (threshold ${threshold}%). Summarize the conversation to free up context while preserving all critical context, decisions, and next steps.`,
 			onComplete: () => {
+				isCompacting = false;
 				if (ctx.hasUI) ctx.ui.notify("Auto-compaction completed.", "info");
 				updateStatus(ctx);
 			},
 			onError: (error) => {
+				isCompacting = false;
 				if (ctx.hasUI) ctx.ui.notify(`Auto-compaction failed: ${error.message}`, "error");
 			},
 		});
 	};
+
+	// Safety net: clear the in-flight flag if a compaction finishes through a path
+	// that did not invoke our callbacks (e.g. aborted elsewhere).
+	pi.on("session_compact", () => {
+		isCompacting = false;
+	});
+
+	pi.on("session_compact_failed", () => {
+		isCompacting = false;
+	});
 
 	pi.on("turn_end", (event, ctx) => {
 		updateStatus(ctx);

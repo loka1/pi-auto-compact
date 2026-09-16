@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-09-16
+
+### Fixed
+- **`Cannot read properties of undefined (reading 'signal')` crash on auto-compaction.**
+  The extension could start a second manual compaction while a previous one was
+  still running (it only checked `cooldownTurns`, and usage stays above the
+  threshold until compaction finishes). Concurrent manual compactions race pi's
+  single `_compactionAbortController`, and whichever finishes first clears it,
+  leaving the other to read `undefined.signal`. An in-flight guard now blocks a
+  new auto-compaction until the running one calls `onComplete`/`onError`, with
+  `session_compact` / `session_compact_failed` as a safety net.
+
 ## [0.3.0] - 2026-08-29
 
 ### Changed (breaking)
