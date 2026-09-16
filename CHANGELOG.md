@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.2] - 2026-09-16
+
+### Added
+- **Resume after auto-compaction** (`continueAfterCompact`, default `true`).
+  pi's manual compaction aborts the running turn and never resumes it, so the
+  agent used to stop right after an auto-compaction. The extension now sends a
+  follow-up message (`continuePrompt`, customizable) once compaction finishes so
+  the agent keeps working from where it left off. Skipped when the context is
+  still above the threshold, to avoid a compact → resume → compact loop.
+- `/autocompact continue [on|off]` and a `resume after compaction` line in
+  `/autocompact` status.
+
 ## [0.3.1] - 2026-09-16
 
 ### Fixed

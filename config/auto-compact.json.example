@@ -2,6 +2,8 @@
   "enabled": true,
   "compactAtPercent": 20,
   "cooldownTurns": 1,
+  "continueAfterCompact": true,
+  "continuePrompt": "Context was automatically compacted. Continue the task you were working on before compaction — resume from where you left off. Do not stop or ask for confirmation unless you are truly blocked. If a tool call was interrupted by the compaction, run it again.",
   "models": {
     "deepseek/deepseek-v4-pro": 15,
     "gpt-4o": 25

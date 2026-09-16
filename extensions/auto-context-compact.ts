@@ -23,11 +23,18 @@
  *     "enabled": true,
  *     "compactAtPercent": 80,          // compact when this % of context is used
  *     "cooldownTurns": 1,              // min turns between auto-compactions
+ *     "continueAfterCompact": true,    // resume the agent after auto-compaction
+ *     "continuePrompt": "...",         // prompt sent to resume work
  *     "models": {
  *       "anthropic/claude-sonnet-4-5": 15,   // key by provider/id or bare id
  *       "gpt-4o": 25
  *     }
  *   }
+ *
+ *   NOTE: pi's manual compaction (ctx.compact) aborts the running turn and does
+ *   NOT resume it, so without continueAfterCompact the agent stops right after
+ *   an auto-compaction. When enabled (default), the extension sends a user
+ *   message after compaction to make the agent keep working.
  *
  *   Commands:
  *     /autocompact                          show config + current status
@@ -56,14 +63,23 @@ interface AutoCompactConfig {
 	compactAtPercent: number;
 	/** Minimum number of turns between automatic compactions. */
 	cooldownTurns: number;
+	/** Send a follow-up prompt so the agent resumes work after auto-compaction. */
+	continueAfterCompact: boolean;
+	/** Prompt used to resume the agent after auto-compaction. */
+	continuePrompt: string;
 	/** Per-model overrides keyed by "provider/id" or bare "id" -> compactAtPercent. */
 	models: Record<string, number>;
 }
+
+const DEFAULT_CONTINUE_PROMPT =
+	"Context was automatically compacted. Continue the task you were working on before compaction — resume from where you left off. Do not stop or ask for confirmation unless you are truly blocked. If a tool call was interrupted by the compaction, run it again.";
 
 const DEFAULTS: AutoCompactConfig = {
 	enabled: true,
 	compactAtPercent: 80,
 	cooldownTurns: 1,
+	continueAfterCompact: true,
+	continuePrompt: DEFAULT_CONTINUE_PROMPT,
 	models: {},
 };
 
@@ -85,6 +101,14 @@ function normalize(value: unknown): AutoCompactConfig {
 			typeof src.cooldownTurns === "number" && src.cooldownTurns >= 0
 				? src.cooldownTurns
 				: DEFAULTS.cooldownTurns,
+		continueAfterCompact:
+			typeof src.continueAfterCompact === "boolean"
+				? src.continueAfterCompact
+				: DEFAULTS.continueAfterCompact,
+		continuePrompt:
+			typeof src.continuePrompt === "string" && src.continuePrompt.trim()
+				? src.continuePrompt
+				: DEFAULTS.continuePrompt,
 		models: src.models && typeof src.models === "object" ? (src.models as Record<string, number>) : {},
 	};
 }
@@ -191,10 +215,22 @@ export default function (pi: ExtensionAPI) {
 		}
 		ctx.compact({
 			customInstructions: `Context reached ${usedPercent.toFixed(1)}% used (threshold ${threshold}%). Summarize the conversation to free up context while preserving all critical context, decisions, and next steps.`,
-			onComplete: () => {
+			onComplete: (result) => {
 				isCompacting = false;
 				if (ctx.hasUI) ctx.ui.notify("Auto-compaction completed.", "info");
 				updateStatus(ctx);
+
+				// pi's manual compaction aborts the running turn and never resumes it,
+				// so the agent would otherwise stop right here. Send a user message to
+				// pick the task back up. Skip it when the context is still above the
+				// threshold, otherwise we would compact -> resume -> compact in a loop.
+				if (!config.continueAfterCompact) return;
+				const after = result?.estimatedTokensAfter;
+				const stillAboveThreshold =
+					typeof after === "number" && (after / window) * 100 >= threshold;
+				if (!stillAboveThreshold) {
+					pi.sendUserMessage(config.continuePrompt, { deliverAs: "followUp" });
+				}
 			},
 			onError: (error) => {
 				isCompacting = false;
@@ -237,6 +273,7 @@ export default function (pi: ExtensionAPI) {
 				lines.push(`enabled: ${config.enabled ? "yes" : "no"}`);
 				lines.push(`global compact-at-used: ${config.compactAtPercent}%`);
 				lines.push(`cooldown: ${config.cooldownTurns} turn(s)`);
+				lines.push(`resume after compaction: ${config.continueAfterCompact ? "yes" : "no"}`);
 				if (model) {
 					const eff = thresholdForModel(config, model.provider, model.id);
 					const overrideKey =
@@ -274,6 +311,26 @@ export default function (pi: ExtensionAPI) {
 				ctx.ui.notify(
 					res.ok
 						? `Auto-compaction ${next.enabled ? "enabled" : "disabled"} (${res.path})`
+						: `Failed to save: ${res.error}`,
+					res.ok ? "info" : "error",
+				);
+				return;
+			}
+
+			if (sub === "continue") {
+				const mode = parts[1]?.toLowerCase();
+				if (mode !== undefined && mode !== "on" && mode !== "off") {
+					ctx.ui.notify("Usage: /autocompact continue [on|off]", "error");
+					return;
+				}
+				const next = {
+					...config,
+					continueAfterCompact: mode ? mode === "on" : !config.continueAfterCompact,
+				};
+				const res = saveConfig(ctx, next);
+				ctx.ui.notify(
+					res.ok
+						? `Resume after compaction ${next.continueAfterCompact ? "enabled" : "disabled"} (${res.path})`
 						: `Failed to save: ${res.error}`,
 					res.ok ? "info" : "error",
 				);
@@ -330,7 +387,7 @@ export default function (pi: ExtensionAPI) {
 			}
 
 			ctx.ui.notify(
-				"Unknown subcommand. Try: /autocompact [set <pct> | model <id> <pct> | unset <id> | toggle]",
+				"Unknown subcommand. Try: /autocompact [set <pct> | model <id> <pct> | unset <id> | toggle | continue [on|off]]",
 				"error",
 			);
 		},

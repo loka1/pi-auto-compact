@@ -39,6 +39,8 @@ Config is merged from JSON files (project wins over global), or set interactivel
   "enabled": true,
   "compactAtPercent": 20,
   "cooldownTurns": 1,
+  "continueAfterCompact": true,
+  "continuePrompt": "Context was automatically compacted. Continue the task you were working on...",
   "models": {
     "deepseek/deepseek-v4-pro": 15,
     "gpt-4o": 25
@@ -49,6 +51,18 @@ Config is merged from JSON files (project wins over global), or set interactivel
 - `compactAtPercent` — **global** default: **compact when this % of the context window is used** (20 = compact when 20% used; higher = wait longer, lower = compact sooner).
 - `models` — **per-model** overrides (win over global). Key by `"provider/id"` or bare `"id"`.
 - `cooldownTurns` — minimum turns between automatic compactions.
+- `continueAfterCompact` — **resume the agent after auto-compaction** (default `true`).
+- `continuePrompt` — the message sent to resume work after compaction.
+
+### Resume after compaction
+
+pi's manual compaction API (`ctx.compact()`) **aborts the running turn and does not resume it**.
+Without help, the agent stops right after an auto-compaction (you'll see an aborted tool
+call). With `continueAfterCompact` enabled (the default), the extension sends a follow-up
+message once compaction finishes so the agent keeps working from where it left off.
+
+The nudge is skipped if the context is still above the threshold after compaction, to
+avoid a compact → resume → compact loop.
 
 ## Commands
 
@@ -58,6 +72,7 @@ Config is merged from JSON files (project wins over global), or set interactivel
 /autocompact model <id> <percent>       → set a PER-MODEL limit (overrides global)
 /autocompact unset <id>                 → remove a per-model override
 /autocompact toggle                     → enable/disable auto-compaction
+/autocompact continue [on|off]          → enable/disable resuming after compaction
 
 # Quick one-command aliases (value = % of context USED at which to compact):
 /set-auto-compact-limit 20                     → compact at 20% used (global)
